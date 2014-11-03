@@ -10,6 +10,15 @@ static struct UserOptions{
 }
 
 /**
+*Struct to be able to compare the desired data and add country and data
+*to the RBT tree so it can be displayed to the user in a readable manner
+*/
+struct CountryWithData {
+	string country;
+	string data;
+}
+
+/**
 * Prompt the user to choose a year and what information he wants from the file.
 * Return theh UserOptions struct so that readFile knows what data to pull from
 * the file.
@@ -61,51 +70,66 @@ void printUserChoices(int userYear) {
 	writeln("6 --> 5 countries with the worst ratio of exports to balance of"
 		" trade for ", userYear);
 	writeln("7 --> Some other bullshit for ", userYear);
-	writeln("8 --> All of the above for ", userYear, "\n");
 }
 
 /**
 * Pull data from the file based on the options chosen from the user
 */
-void readFile(UserOptions uo, File file) {
+CountryWithData[] readFile(UserOptions uo, File file) {
 	int year = uo.year;
 	int choice = uo.choice;
-	string fullRegex = format("[A-a-z]+,[-0-9]*,[-0-9]*,%s,[-0-9]*", year);
-	string optionRegex;
+	string fullRegex = format("[A-Za-z]+,[-0-9]*,[-0-9]*,%s,[-0-9]*", year);
+	string[] lineSplit = new string[](6);
+	CountryWithData[] unsortedArray;
+	int index = 0;
 	while (!file.eof()) {
+		CountryWithData cwd;
 		string line = chomp(file.readln());
 		if (match(line, fullRegex)) {
+		lineSplit = split(line, ",");
 			switch (choice) {
 				default:
 					throw new Exception("Invalid Number");
 				case 1:
-					optionRegex = "";
-					writeln(year, " ", choice, " -->\t|\t", line);
+					cwd.data = lineSplit[1];
+					//writeln(year, " ", choice, " -->\t|\t", line);
 					break;
 				case 2:
-					optionRegex = "";
+					cwd.data = lineSplit[1];
 					break;
 				case 3:
-					optionRegex = "";
+					cwd.data = lineSplit[2];
 					break;
 				case 4:
-					optionRegex = "";
+					cwd.data = lineSplit[2];
 					break;
 				case 5:
-					optionRegex = "";
+					auto a = to!double(lineSplit[1]);
+					auto b = to!double(lineSplit[2]);
+					auto c = to!string(a / b);
+					cwd.data = c;
 					break;
 				case 6:
-					optionRegex = "";
+					auto a = to!double(lineSplit[1]);
+					auto b = to!double(lineSplit[2]);
+					auto c = to!string(a / b);
+					cwd.data = c;
 					break;
 				case 7:
-					optionRegex = "";
-					break;
-				case 8:
-					optionRegex = "";
+					//Some other stat of my own
 					break;
 			}
+			cwd.country = lineSplit[0];
+			++unsortedArray.length;
+			unsortedArray[index] = cwd;
+			index++;
 		}
 	}
+	for (int i = 0; i < unsortedArray.length; i++) {
+
+		writeln(unsortedArray[i]);
+	}
+	return unsortedArray;
 }
 
 void main() {
