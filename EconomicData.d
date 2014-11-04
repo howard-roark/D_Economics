@@ -1,4 +1,4 @@
-import std.stdio, std.string, std.regex, std.conv;
+import std.stdio, std.string, std.regex, std.conv, std.algorithm;
 
 /**
 * Struct to hold the options the user chose for what info they would like
@@ -69,7 +69,7 @@ void printUserChoices(int userYear) {
 		" for ", userYear);
 	writeln("6 --> 5 countries with the worst ratio of exports to balance of"
 		" trade for ", userYear);
-	writeln("7 --> Some other bullshit for ", userYear);
+	writeln("7 --> 5 most populated countries for ", userYear);
 }
 
 /**
@@ -80,7 +80,7 @@ CountryWithData[] readFile(UserOptions uo, File file) {
 	int choice = uo.choice;
 	string fullRegex = format("[A-Za-z]+,[-0-9]*,[-0-9]*,%s,[-0-9]*", year);
 	string[] lineSplit = new string[](6);
-	CountryWithData[] unsortedArray;
+	CountryWithData[] sortedArray;
 	int index = 0;
 	while (!file.eof()) {
 		CountryWithData cwd;
@@ -89,26 +89,17 @@ CountryWithData[] readFile(UserOptions uo, File file) {
 		lineSplit = split(line, ",");
 			switch (choice) {
 				default:
+					//Number was already confirmed in promptUser
 					throw new Exception("Invalid Number");
 				case 1:
-					cwd.data = lineSplit[1];
-					//writeln(year, " ", choice, " -->\t|\t", line);
-					break;
 				case 2:
 					cwd.data = lineSplit[1];
 					break;
 				case 3:
-					cwd.data = lineSplit[2];
-					break;
 				case 4:
 					cwd.data = lineSplit[2];
 					break;
 				case 5:
-					auto a = to!double(lineSplit[1]);
-					auto b = to!double(lineSplit[2]);
-					auto c = to!string(a / b);
-					cwd.data = c;
-					break;
 				case 6:
 					auto a = to!double(lineSplit[1]);
 					auto b = to!double(lineSplit[2]);
@@ -116,23 +107,37 @@ CountryWithData[] readFile(UserOptions uo, File file) {
 					cwd.data = c;
 					break;
 				case 7:
-					//Some other stat of my own
+					cwd.data = lineSplit[4];
 					break;
 			}
 			cwd.country = lineSplit[0];
-			++unsortedArray.length;
-			unsortedArray[index] = cwd;
+			++sortedArray.length;
+			sortedArray[index] = cwd;
 			index++;
 		}
 	}
-	for (int i = 0; i < unsortedArray.length; i++) {
-
-		writeln(unsortedArray[i]);
-	}
-	return unsortedArray;
+	sortedArray.sort!q{ to!int(a.data) > to!int(b.data) };
+	return sortedArray;
 }
 
 void main() {
 	//promptUser will return the UserOptions struct
-	readFile(promptUser(), File("exports_balance.txt", "r"));
+	CountryWithData[] sortedArray =
+		readFile(promptUser(), File("exports_balance.txt", "r"));
+		switch(UserOptions.choice) {
+			case 1:
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			case 4:
+				break;
+			case 5:
+				break;
+			case 7:
+				break;
+			default:
+				throw new Exception("Invalid Choice");
+		}
 }
