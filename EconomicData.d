@@ -1,17 +1,17 @@
-import std.stdio, std.string, std.regex, std.conv, std.algorithm;
+import std.stdio, std.string, std.regex, std.conv, std.algorithm, std.datetime;
+import core.stdc.stdlib;
 
 /**
-* Struct to hold the options the user chose for what info they would like
-* displayed.
+* Struct to hold the year and what data the user would like displayed
 */
-static struct UserOptions{
+struct UserOptions{
 	int year;
-	int choice;
+	static int choice;
 }
 
 /**
-*Struct to be able to compare the desired data and add country and data
-*to the RBT tree so it can be displayed to the user in a readable manner
+* Struct to hold the country and what data is being sought by the user, used
+* when building and sorting the array that will hold the data.
 */
 struct CountryWithData {
 	string country;
@@ -19,9 +19,8 @@ struct CountryWithData {
 }
 
 /**
-* Prompt the user to choose a year and what information he wants from the file.
-* Return theh UserOptions struct so that readFile knows what data to pull from
-* the file.
+* Prompt the user for what year they would like to query and what data they are
+* looking for.
 */
 UserOptions promptUser() {
 	writeln("\nPlease enter a valid year between 1986 and 2006" 
@@ -34,7 +33,6 @@ UserOptions promptUser() {
 		readf(" %s", &userYear);
 	}
 
-	//Instantiate struct so that values can be set based on user input
 	UserOptions uo;
 	uo.year = userYear;
 
@@ -58,7 +56,8 @@ UserOptions promptUser() {
 }
 
 /**
-* Print the options the user has to the console.
+* Method to print user choices, may be called from multiple locations if the user
+* enters an invalid choice.
 */
 void printUserChoices(int userYear) {
 	writeln("1 --> Top 5 exporting countries for ", userYear);
@@ -73,71 +72,115 @@ void printUserChoices(int userYear) {
 }
 
 /**
-* Pull data from the file based on the options chosen from the user
+* Read the data file with all of the economic information that needs to be sorted
+* based on user input options chosen.
 */
-CountryWithData[] readFile(UserOptions uo, File file) {
+string[] readFile(UserOptions uo, File file) {
 	int year = uo.year;
-	int choice = uo.choice;
 	string fullRegex = format("[A-Za-z]+,[-0-9]*,[-0-9]*,%s,[-0-9]*", year);
-	string[] lineSplit = new string[](6);
-	CountryWithData[] sortedArray;
+	string[] unSortedArray;
 	int index = 0;
 	while (!file.eof()) {
-		CountryWithData cwd;
 		string line = chomp(file.readln());
 		if (match(line, fullRegex)) {
-		lineSplit = split(line, ",");
-			switch (choice) {
-				default:
-					//Number was already confirmed in promptUser
-					throw new Exception("Invalid Number");
-				case 1:
-				case 2:
-					cwd.data = lineSplit[1];
-					break;
-				case 3:
-				case 4:
-					cwd.data = lineSplit[2];
-					break;
-				case 5:
-				case 6:
-					auto a = to!double(lineSplit[1]);
-					auto b = to!double(lineSplit[2]);
-					auto c = to!string(a / b);
-					cwd.data = c;
-					break;
-				case 7:
-					cwd.data = lineSplit[4];
-					break;
-			}
-			cwd.country = lineSplit[0];
-			++sortedArray.length;
-			sortedArray[index] = cwd;
+			++unSortedArray.length;
+			unSortedArray[index] = line;
 			index++;
 		}
 	}
+	return unSortedArray;
+}
+
+CountryWithData[] sortCWDArray(string[] unSortedArray) {
+	int choice = UserOptions.choice;
+	int index = 0;
+	string[] lineSplit = new string[](6);
+	CountryWithData[] sortedArray;
+	for (int i = 0; i < unSortedArray.length; i++) {
+		CountryWithData cwd;
+		lineSplit = split(unSortedArray[i], ",");
+		switch (choice) {
+			default:
+				//Number was already confirmed in promptUser
+				throw new Exception("Invalid Number");
+			case 1:
+			case 2:
+				cwd.data = lineSplit[1];
+				break;
+			case 3:
+			case 4:
+				cwd.data = lineSplit[2];
+				break;
+			case 5:
+			case 6:
+				auto a = to!double(lineSplit[1]);
+				auto b = to!double(lineSplit[2]);
+				auto c = to!string(a / b);
+				cwd.data = c;
+				break;
+			case 7:
+				cwd.data = lineSplit[4];
+				break;
+		}
+		cwd.country = lineSplit[0];
+		++sortedArray.length;
+		sortedArray[index] = cwd;
+		index++;
+	}
+    auto startTime = Clock.currTime();
 	sortedArray.sort!q{ to!int(a.data) > to!int(b.data) };
+    auto finishTime = Clock.currTime();
+    writeln("\nSort took: ", finishTime - startTime);
 	return sortedArray;
 }
 
-void main() {
-	//promptUser will return the UserOptions struct
-	CountryWithData[] sortedArray =
-		readFile(promptUser(), File("exports_balance.txt", "r"));
-		switch(UserOptions.choice) {
-			case 1:
-				break;
-			case 2:
-				break;
-			case 3:
-				break;
-			case 4:
-				break;
-			case 5:
-				break;
-			case 7:
-				break;
-			default:
-				throw new Exception("Invalid Choice");
+/**
+* Print the results from what the user was looking for.
+*/
+void printResults(CountryWithData[] cwd) {
+	int choice = UserOptions.choice;
+	switch (choice) {
+		default:
+			throw new Exception("Invalid Number");
+		case 1:
+		case 3:
+		case 5:
+		case 7:
+		for (int i = 0; i < 5; i++) {
+			writeln(cwd[i].country, ":  ", cwd[i].data);
 		}
+			break;
+		case 2:
+		case 4:
+		case 6:
+		for (auto i = cwd.length - 1; i > cwd.length - 6; i--) {
+			writeln(cwd[i].country, ":  ", cwd[i].data);
+		}
+			break;
+	}
+}
+
+/**
+* Main method to drive program.
+*/
+void main() {
+	writeln("\nWelcome to Economic Data Info!");
+	printResults(
+		sortCWDArray(
+			readFile(
+				promptUser(), File("exports_balance.txt", "r"))));
+	writeln("\nPlease press \'Y\' to request more info or \'N\' to Exit");
+	char choice;
+	readf(" %s", &choice);
+	while (choice != 'Y' && choice != 'y' && choice != 'N' && choice != 'n') {
+		writeln("Invalid choice:"
+			"\nPlease press \'Y\' to request more info or \'N\' to Exit");
+		readf(" %s", &choice);
+	}
+	if (choice == 'Y' || choice == 'y') {
+		main();
+	} else {
+		writeln("Thank you for visiting, Goodbye");
+		exit(0);
+	}
 }
